@@ -1,131 +1,177 @@
 # Casos de Teste - Sistema de Reserva de Laboratórios
 
-## Caso de Teste 01 - Efetivação de Reserva Padrão (RF-01)
-**Descrição:** Validar a funcionalidade básica de criação de reserva e suas validações de campos obrigatórios.
-**Pré-condições:** Usuário logado. Laboratórios disponíveis no sistema.
-*   **Cenário Positivo:**
-    *   **Passos:** Preencher sala, data, horário e vincular uma turma válida. Clicar em "Salvar".
-    *   **Resultado Esperado:** Sistema exibe mensagem de sucesso e confirma a reserva.
-*   **Cenário Negativo:**
-    *   **Passos:** Deixar o campo "Turma" ou "Horário" em branco e tentar salvar.
-    *   **Resultado Esperado:** O sistema bloqueia a ação, destaca os campos não preenchidos em vermelho e exibe a mensagem "Campos obrigatórios ausentes". A reserva não é criada.
+---
+
+### Caso de Teste 1 - Criação de Reserva e Restrições de Unidade/Horário (CT-01)
+**Descrição:** Verificar se o sistema permite a criação de reservas em horários e unidades permitidas, impedindo agendamentos fora do horário de funcionamento ou em unidades não autorizadas ao perfil.  
+**Pré-condições:** Usuário com perfil "Docente" autenticado no sistema e vinculado à "Unidade Centro". Salas cadastradas na base.  
+**Passos:**
+1. Acessar o módulo de agendamento de laboratórios.
+2. Selecionar o laboratório desejado na lista de opções disponíveis.
+3. Informar a turma e o intervalo de horário desejado.
+4. Clicar no botão "Salvar Reserva".
+
+#### Cenário 1 - Criação de reserva com sucesso (Fluxo Positivo):
+- **Dados de Teste:**
+  - Laboratório: "Lab 01 - Unidade Centro"
+  - Turma: "Engenharia de Software (30 alunos)"
+  - Horário: "10:00 às 12:00"
+- **Resultado Esperado:**
+  - A reserva é confirmada e exibida na grade de horários.
+  - A trilha de auditoria grava o log de inserção (*Insert*) com os dados da transação (RNF-02).
+  - Apenas salas vinculadas à "Unidade Centro" são listadas para o docente (RNF-03).
+
+#### Cenário 2 - Tentativa de agendamento fora da janela permitida (Fluxo Negativo):
+- **Dados de Teste:**
+  - Laboratório: "Lab 01 - Unidade Centro"
+  - Horário: "23:00 às 00:00" (fora da janela de 07h30 às 22h30)
+- **Resultado Esperado:**
+  - O sistema bloqueia a criação do agendamento.
+  - Exibe mensagem de erro informando que o horário está fora do intervalo de funcionamento permitido (RF-05).
+  - Nenhuma reserva é gravada no banco.
+
+#### Cenário 3 - Tentativa de reserva em unidade não autorizada via manipulação de ID (Fluxo Negativo):
+- **Dados de Teste:**
+  - Laboratório: ID correspondente a "Lab Sul 01 - Unidade Sul"
+  - Horário: "10:00 às 12:00"
+- **Resultado Esperado:**
+  - O sistema rejeita a solicitação emitindo código/alerta de Acesso Não Autorizado (Erro 403 / Proibido) (RNF-03).
+  - A reserva não é criada e a tentativa irregular é registrada em log de segurança.
+
+**Pós-condições:** O sistema mantém a integridade da grade de horários e exibe a mensagem de confirmação ou erro de acordo com o cenário testado.
 
 ---
 
-## Caso de Teste 02 - Prevenção de Dupla Ocupação (RF-02)
-**Descrição:** Assegurar que o sistema recuse o agendamento de uma sala que já possui uma reserva confirmada para o mesmo dia e horário.
-**Pré-condições:** O "Laboratório A" já possui uma reserva confirmada das 08:00 às 10:00 no dia 15/09.
-*   **Cenário Positivo:**
-    *   **Passos:** Tentar reservar o "Laboratório A" para o dia 15/09, no horário livre das 10:30 às 12:00.
-    *   **Resultado Esperado:** Reserva efetuada com sucesso, pois não há conflito.
-*   **Cenário Negativo:**
-    *   **Passos:** Tentar reservar o mesmo "Laboratório A" para o dia 15/09, das 09:00 às 11:00 (gerando sobreposição).
-    *   **Resultado Esperado:** O sistema interrompe o fluxo, exibe um aviso informando choque de horários e aborta a transação.
+### Caso de Teste 2 - Travas de Conflito de Horário, Capacidade e Manutenção (CT-02)
+**Descrição:** Verificar se o sistema valida corretamente a disponibilidade do espaço, impedindo choque de horários, excesso de capacidade de alunos e alocação de salas em manutenção.  
+**Pré-condições:** 
+- "Sala A" com reserva existente das 08:00 às 10:00.
+- "Sala B" com capacidade máxima de 30 alunos.
+- "Sala C" com status "Em Manutenção".  
+**Passos:**
+1. Acessar a tela de nova reserva.
+2. Selecionar a sala e preencher o tamanho da turma e o horário.
+3. Confirmar a submissão no botão "Salvar".
+
+#### Cenário 1 - Reserva válida respeitando horário e capacidade (Fluxo Positivo):
+- **Dados de Teste:**
+  - Sala: "Sala A" | Horário: "10:30 às 12:00" | Turma: 25 alunos
+  - Sala: "Sala B" | Horário: "14:00 às 16:00" | Turma: 25 alunos (limite: 30)
+- **Resultado Esperado:**
+  - Ambas as reservas são processadas e salvas com sucesso no sistema.
+
+#### Cenário 2 - Tentativa de agendamento em horário conflitante (Fluxo Negativo):
+- **Dados de Teste:**
+  - Sala: "Sala A"
+  - Horário: "09:00 às 11:00" (conflita com reserva das 08:00 às 10:00)
+- **Resultado Esperado:**
+  - O sistema aborta o agendamento e emite mensagem de aviso indicando choque/sobreposição de horários (RF-02).
+
+#### Cenário 3 - Tentativa de alocação de turma que excede a lotação (Fluxo Negativo):
+- **Dados de Teste:**
+  - Sala: "Sala B" (capacidade máxima: 30)
+  - Turma: 35 alunos
+- **Resultado Esperado:**
+  - O sistema recusa o agendamento e apresenta alerta de superlotação/capacidade física excedida (RF-03).
+
+#### Cenário 4 - Tentativa de agendamento de sala em manutenção (Fluxo Negativo):
+- **Dados de Teste:**
+  - Sala: "Sala C" (Status: Em Manutenção)
+- **Resultado Esperado:**
+  - O sistema bloqueia a seleção ou exibe alerta de que a sala está indisponível para uso devido a manutenção (RF-04).
+
+**Pós-condições:** O sistema permanece consistente sem permitir registros inválidos ou sobrepostos na base de dados.
 
 ---
 
-## Caso de Teste 03 - Validação de Limite de Alunos (RF-03)
-**Descrição:** Confirmar se o sistema controla corretamente a relação entre tamanho da turma e capacidade física do laboratório.
-**Pré-condições:** "Laboratório B" possui capacidade máxima configurada para 30 alunos.
-*   **Cenário Positivo:**
-    *   **Passos:** Selecionar o "Laboratório B" e vincular uma turma com 25 alunos. Clicar em salvar.
-    *   **Resultado Esperado:** Reserva aprovada e registrada na grade.
-*   **Cenário Negativo:**
-    *   **Passos:** Selecionar o "Laboratório B" e vincular uma turma com 35 alunos.
-    *   **Resultado Esperado:** A interface exibe alerta de incompatibilidade (capacidade excedida) e desabilita a opção de confirmação.
+### Caso de Teste 3 - Permissões de Edição e Notificações (CT-03)
+**Descrição:** Validar as regras de controle de acesso para alteração de agendamentos por terceiros e o respectivo disparo de alertas de comunicação.  
+**Pré-condições:** 
+- Usuário "Prof. João" (Docente) e usuária "Coord. Maria" (Coordenação) ativos no sistema.
+- Reserva existente criada pelo usuário "Prof. João".  
+**Passos:**
+1. Acessar a tela de consulta/detalhes da reserva existente.
+2. Aplicar as alterações necessárias nos campos de data/horário.
+3. Clicar em "Atualizar Reserva".
+
+#### Cenário 1 - Edição de reserva realizada pela coordenação (Fluxo Positivo):
+- **Dados de Teste:**
+  - Usuário logado: "Coord. Maria"
+  - Ação: Alterar horário da reserva de "João" de 08:00 para 09:00
+- **Resultado Esperado:**
+  - A alteração é salva com sucesso (RF-06).
+  - O sistema dispara automaticamente um alerta/notificação para o "Prof. João" comunicando a mudança (RF-08).
+  - A auditoria grava o log de atualização (*Update*) com identificação do autor da edição (RNF-02).
+
+#### Cenário 2 - Tentativa de edição por outro docente sem permissão (Fluxo Negativo):
+- **Dados de Teste:**
+  - Usuário logado: "Prof. Carlos" (Docente sem perfil de coordenação)
+  - Ação: Tentar editar a reserva de "João" via URL direta ou interface
+- **Resultado Esperado:**
+  - O botão de edição permanece oculto ou o sistema exibe mensagem de "Acesso Negado" (RF-06).
+  - Nenhuma alteração é refletida no agendamento.
+
+#### Cenário 3 - Submissão de formulário sem alterações efetivas (Fluxo Negativo):
+- **Dados de Teste:**
+  - Usuário logado: "Coord. Maria"
+  - Ação: Abrir modal de edição da reserva de "João" e salvar sem modificar dados
+- **Resultado Esperado:**
+  - O sistema identifica a ausência de mudanças e não dispara notificações duplicadas ou desnecessárias aos envolvidos.
+
+**Pós-condições:** O agendamento mantém os dados autorizados e os logs refletem com precisão as tentativas de manipulação.
 
 ---
 
-## Caso de Teste 04 - Trava de Manutenção de Laboratório (RF-04)
-**Descrição:** Garantir que espaços em manutenção fiquem indisponíveis para novas reservas.
-**Pré-condições:** O "Laboratório C" foi colocado no status "Em Manutenção". "Laboratório D" está "Livre".
-*   **Cenário Positivo:**
-    *   **Passos:** Buscar horários para o "Laboratório D" e confirmar agendamento.
-    *   **Resultado Esperado:** Operação concluída sem restrições de status.
-*   **Cenário Negativo:**
-    *   **Passos:** Tentar forçar o agendamento no "Laboratório C" injetando o ID da sala diretamente na requisição (API) ou via URL direta.
-    *   **Resultado Esperado:** O backend do sistema deve barrar a tentativa, retornando erro de indisponibilidade técnica da sala.
+### Caso de Teste 4 - Cancelamento, Liberação de Agenda e Histórico (CT-04)
+**Descrição:** Verificar se o processo de cancelamento libera o espaço na grade, mantém histórico em log e impede cancelamentos retroativos de reservas já realizadas.  
+**Pré-condições:** 
+- Reserva 1: Agendamento ativo em data futura cadastrado pelo usuário.
+- Reserva 2: Agendamento já concluído em data passada cadastrado pelo usuário.  
+**Passos:**
+1. Acessar o painel "Meus Agendamentos".
+2. Localizar o agendamento desejado.
+3. Acionar a opção "Cancelar Reserva" e confirmar a operação no modal.
+
+#### Cenário 1 - Cancelamento de reserva futura com sucesso (Fluxo Positivo):
+- **Dados de Teste:**
+  - Reserva Selecionada: Reserva 1 (Futura)
+- **Resultado Esperado:**
+  - O horário é liberado imediatamente, retornando ao estado "Livre" na grade de disponibilidade (RF-07).
+  - O sistema emite notificação confirmando a desmarcação (RF-08).
+  - A trilha de auditoria registra a exclusão/cancelamento (*Delete/Update*) (RNF-02).
+
+#### Cenário 2 - Tentativa de cancelamento de reserva passada/retroativa (Fluxo Negativo):
+- **Dados de Teste:**
+  - Reserva Selecionada: Reserva 2 (Passada/Concluída)
+- **Resultado Esperado:**
+  - A opção de cancelamento fica desabilitada/oculta na interface.
+  - Caso forçada via requisição direta, o sistema rejeita a operação informando que eventos passados não podem ser desmarcados.
+
+**Pós-condições:** A grade de agendamentos reflete a disponibilidade atualizada e o histórico permanece íntegro para auditoria.
 
 ---
 
-## Caso de Teste 05 - Regra da Janela de Horário (RF-05)
-**Descrição:** Certificar que o sistema obedece ao horário de funcionamento da instituição (07h30 às 22h30).
-**Pré-condições:** Usuário na tela de criação de agendamentos.
-*   **Cenário Positivo:**
-    *   **Passos:** Agendar uma reserva das 19:00 às 21:00.
-    *   **Resultado Esperado:** Agendamento ocorre normalmente.
-*   **Cenário Negativo:**
-    *   **Passos:** Tentar inserir um horário de início para as 23:00 e término às 23:50.
-    *   **Resultado Esperado:** Bloqueio imediato na interface com a mensagem alertando que o horário está fora do período de funcionamento.
+### Caso de Teste 5 - Desempenho e Filtragem no Motor de Busca (CT-05)
+**Descrição:** Avaliar a agilidade na resposta de consultas de disponibilidade e o comportamento do sistema diante de parâmetros de entrada inválidos.  
+**Pré-condições:** Base de dados de homologação populada com volume representativo de registros para simular produção. Usuário autenticado.  
+**Passos:**
+1. Acessar a tela de pesquisa de disponibilidade de laboratórios.
+2. Inserir os critérios de busca (data e filtros de unidade).
+3. Clicar no botão "Buscar Salas".
 
----
+#### Cenário 1 - Consulta de disponibilidade com parâmetros válidos (Fluxo Positivo):
+- **Dados de Teste:**
+  - Data: Data futura válida no calendário
+  - Filtro: Unidade vinculada ao perfil do usuário
+- **Resultado Esperado:**
+  - A listagem de salas disponíveis é retornada e renderizada em menos de 2.000 ms (RNF-01).
+  - Apenas as salas das unidades autorizadas ao usuário são exibidas (RNF-03).
 
-## Caso de Teste 06 - Permissão de Edição por Hierarquia (RF-06)
-**Descrição:** Validar as permissões de acesso sobre a modificação de agendamentos de terceiros.
-**Pré-condições:** Reserva ativa sob titularidade do "Prof. João". "Prof. Pedro" logado no sistema.
-*   **Cenário Positivo:**
-    *   **Passos:** Um usuário com perfil "Coordenador" acessa o sistema, busca a reserva do "Prof. João" e altera a data.
-    *   **Resultado Esperado:** Alteração salva com sucesso, pois o perfil possui o privilégio necessário.
-*   **Cenário Negativo:**
-    *   **Passos:** "Prof. Pedro" tenta enviar um payload malicioso via DevTools (alterando o ID da sua própria reserva para o ID da reserva do João) na tentativa de modificá-la.
-    *   **Resultado Esperado:** O servidor recusa a modificação com o código HTTP 403 (Acesso Negado), detectando que ele não é dono da reserva nem coordenador.
+#### Cenário 2 - Consulta com data logicamente inválida (Fluxo Negativo):
+- **Dados de Teste:**
+  - Data: "31/02/2026" (Data inexistente/inválida)
+- **Resultado Esperado:**
+  - O sistema valida o dado na camada de interface/entrada antes da consulta pesada no banco.
+  - A operação responde rapidamente (< 2s) exibindo mensagem de "Data Inválida", sem impactar o desempenho do servidor.
 
----
-
-## Caso de Teste 07 - Cancelamento, Liberação e Histórico (RF-07)
-**Descrição:** Avaliar as regras de negócio em torno do cancelamento de reservas.
-**Pré-condições:** Duas reservas do usuário logado: uma futura e uma que ocorreu na semana passada.
-*   **Cenário Positivo:**
-    *   **Passos:** Clicar em "Cancelar" na reserva futura.
-    *   **Resultado Esperado:** Horário é liberado na grade imediatamente e a ação fica gravada no histórico.
-*   **Cenário Negativo:**
-    *   **Passos:** Tentar acessar a reserva que ocorreu na semana passada e acionar o botão/rota de cancelamento.
-    *   **Resultado Esperado:** O sistema deve impedir o cancelamento de eventos retroativos (já concluídos), emitindo um aviso de que a ação é inválida para o período.
-
----
-
-## Caso de Teste 08 - Disparo de Notificações (RF-08)
-**Descrição:** Validar o envio de notificações após eventos de alteração ou exclusão.
-**Pré-condições:** Reserva ativa. Sistema de mensagens em funcionamento.
-*   **Cenário Positivo:**
-    *   **Passos:** Coordenador altera o horário de uma reserva e salva.
-    *   **Resultado Esperado:** O sistema gera um evento de alerta na caixa de notificações do professor responsável avisando da alteração.
-*   **Cenário Negativo:**
-    *   **Passos:** Usuário clica em "Editar" na sua própria reserva, não faz nenhuma mudança nos campos e clica em "Salvar".
-    *   **Resultado Esperado:** O sistema identifica que não houve mudança real nos dados e **não** gera disparo de notificação falsa/redundante.
-
----
-
-## Caso de Teste 09 - Desempenho da Busca (RNF-01)
-**Descrição:** Avaliar a estabilidade e o tempo de resposta do módulo de busca.
-**Pré-condições:** Banco de dados populado. Ferramentas de medição de rede ativas.
-*   **Cenário Positivo:**
-    *   **Passos:** Executar uma busca por laboratórios vagos com filtros convencionais (data e unidade).
-    *   **Resultado Esperado:** O servidor deve retornar e a tela deve renderizar a listagem em um tempo total inferior a 2 segundos.
-*   **Cenário Negativo:**
-    *   **Passos:** Inserir dados corrompidos ou inválidos no filtro de datas (ex: 31/02/2026 ou formatos inesperados) e acionar a busca.
-    *   **Resultado Esperado:** O sistema não deve tentar fazer uma varredura pesada no banco. A validação deve ocorrer rapidamente, devolvendo a mensagem de "Data inválida" e mantendo o tempo de resposta muito abaixo do teto de 2 segundos.
-
----
-
-## Caso de Teste 10 - Registro na Trilha de Auditoria (RNF-02)
-**Descrição:** Garantir a inviolabilidade e a geração da trilha de auditoria.
-**Pré-condições:** Diversas operações (inserts, updates e deletes) foram realizadas recentemente.
-*   **Cenário Positivo:**
-    *   **Passos:** Um administrador do sistema acessa o painel de logs de auditoria.
-    *   **Resultado Esperado:** Todos os registros das ações constam na tabela com usuário, data/hora e metadados corretos.
-*   **Cenário Negativo:**
-    *   **Passos:** Um usuário comum descobre a URL do painel de auditoria (`/relatorios/auditoria`) e tenta acessá-la para visualizar ou excluir rastros.
-    *   **Resultado Esperado:** O sistema barra o acesso imediatamente por falta de privilégios de segurança (retorno 401 ou 403), mantendo o sigilo dos logs.
-
----
-
-## Caso de Teste 11 - Restrição de Acesso por Unidade (RNF-03)
-**Descrição:** Confirmar o isolamento lógico das unidades dentro da plataforma.
-**Pré-condições:** Usuário logado pertence apenas à "Unidade Centro".
-*   **Cenário Positivo:**
-    *   **Passos:** Acessar a listagem geral de laboratórios e pesquisar horários vagos.
-    *   **Resultado Esperado:** Apenas salas pertencentes à "Unidade Centro" são listadas e disponibilizadas para reserva.
-*   **Cenário Negativo:**
-    *   **Passos:** O usuário intercepta o envio do formulário de reserva e troca manualmente o `id_sala` para uma sala pertencente à "Unidade Sul".
-    *   **Resultado Esperado:** O sistema identifica a incompatibilidade de escopo no backend e rejeita a transação por falha de autorização corporativa, não criando a reserva.
+**Pós-condições:** O sistema permanece estável e com tempos de latência dentro do limite acordado.
