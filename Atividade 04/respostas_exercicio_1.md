@@ -18,7 +18,7 @@ As três decisões são os nós 2, 4 e 6, em cada losango, a saída **T** signif
 
 ## 2. Grafo de Fluxo de Controle
 
-![Grafo de Fluxo de Controle numerado do Exercício 1](imagens/cfg_exercicio_1.svg)
+![Grafo de Fluxo de Controle numerado do Exercício 1](./imagens/grafo_exercicio_1.png)
 
 O nó 7 representa o encerramento antecipado, após o retorno de pagamento recusado, o fluxo segue ao fim do método e não executa o nó 8.
 
