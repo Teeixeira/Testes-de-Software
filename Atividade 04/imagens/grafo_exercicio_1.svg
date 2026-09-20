@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 740" width="100%" height="100%" style="background-color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <defs>
+    <!-- Marcador de Seta Padronizado -->
+    <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#334155" />
+    </marker>
+  </defs>
+
+  <style>
+    .node-start-end { fill: #ecfdf5; stroke: #059669; stroke-width: 2; }
+    .node-decision  { fill: #fff7ed; stroke: #ea580c; stroke-width: 2; }
+    .node-action    { fill: #f8fafc; stroke: #334155; stroke-width: 2; }
+    .line           { fill: none; stroke: #334155; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+    .text-main      { font-size: 13px; font-weight: 600; fill: #0f172a; text-anchor: middle; dominant-baseline: central; }
+    .text-code      { font-family: 'Fira Code', Consolas, Monaco, monospace; font-size: 12px; }
+    .text-label     { font-size: 12px; font-weight: 700; fill: #475569; text-anchor: middle; dominant-baseline: central; }
+  </style>
+
+  <!-- LINHAS E CONEXÕES -->
+  <!-- Início -> Condição 1 -->
+  <path d="M 400 60 L 400 100" class="line" marker-end="url(#arrow)"/>
+
+  <!-- Condição 1 -> Ação 1 (Sim) -->
+  <path d="M 320 140 L 220 140 L 220 190" class="line" marker-end="url(#arrow)"/>
+  <text x="270" y="128" class="text-label">Sim</text>
+
+  <!-- Condição 1 -> Condição 2 (Não) -->
+  <path d="M 400 180 L 400 270" class="line" marker-end="url(#arrow)"/>
+  <text x="418" y="210" class="text-label">Não</text>
+
+  <!-- Retorno da Ação 1 ao fluxo principal antes da Condição 2 -->
+  <path d="M 220 240 L 220 255 L 400 255" class="line" marker-end="url(#arrow)"/>
+
+  <!-- Condição 2 -> Ação 2 (Sim) -->
+  <path d="M 320 310 L 220 310 L 220 360" class="line" marker-end="url(#arrow)"/>
+  <text x="270" y="298" class="text-label">Sim</text>
+
+  <!-- Condição 2 -> Condição 3 (Não) -->
+  <path d="M 400 350 L 400 440" class="line" marker-end="url(#arrow)"/>
+  <text x="418" y="380" class="text-label">Não</text>
+
+  <!-- Retorno da Ação 2 ao fluxo principal antes da Condição 3 -->
+  <path d="M 220 410 L 220 425 L 400 425" class="line" marker-end="url(#arrow)"/>
+
+  <!-- Condição 3 -> Retorno Recusado (Sim: !pagamentoAprovado) -->
+  <path d="M 310 480 L 220 480 L 220 540" class="line" marker-end="url(#arrow)"/>
+  <text x="265" y="468" class="text-label">Sim</text>
+
+  <!-- Condição 3 -> Retorno Aprovado (Não: pagamentoAprovado == true) -->
+  <path d="M 490 480 L 580 480 L 580 540" class="line" marker-end="url(#arrow)"/>
+  <text x="535" y="468" class="text-label">Não</text>
+
+  <!-- Retorno Recusado -> Fim -->
+  <path d="M 220 595 L 220 645 L 400 645 L 400 660" class="line" marker-end="url(#arrow)"/>
+
+  <!-- Retorno Aprovado -> Fim -->
+  <path d="M 580 595 L 580 645 L 400 645" class="line"/>
+
+
+  <!-- NÓS E FIGURAS GEOMÉTRICAS -->
+
+  <!-- Início -->
+  <rect x="290" y="20" width="220" height="40" rx="20" ry="20" class="node-start-end"/>
+  <text x="400" y="40" class="text-main">Início (desconto = 0)</text>
+
+  <!-- Condição 1 -->
+  <polygon points="400,100 480,140 400,180 320,140" class="node-decision"/>
+  <text x="400" y="140" class="text-main text-code">valor &gt;= 500 ?</text>
+
+  <!-- Ação 1 -->
+  <rect x="120" y="190" width="200" height="50" rx="8" ry="8" class="node-action"/>
+  <text x="220" y="215" class="text-main text-code">desconto = 10;</text>
+
+  <!-- Condição 2 -->
+  <polygon points="400,270 480,310 400,350 320,310" class="node-decision"/>
+  <text x="400" y="310" class="text-main text-code">clienteVip ?</text>
+
+  <!-- Ação 2 -->
+  <rect x="120" y="360" width="200" height="50" rx="8" ry="8" class="node-action"/>
+  <text x="220" y="385" class="text-main text-code">desconto += 5;</text>
+
+  <!-- Condição 3 -->
+  <polygon points="400,440 490,480 400,520 310,480" class="node-decision"/>
+  <text x="400" y="480" class="text-main text-code">!pagamentoAprovado ?</text>
+
+  <!-- Ação 3: Retorno Recusado -->
+  <rect x="110" y="540" width="220" height="55" rx="8" ry="8" class="node-action"/>
+  <text x="220" y="567" class="text-main text-code">
+    <tspan x="220" dy="-8">return</tspan>
+    <tspan x="220" dy="18">"PAGAMENTO RECUSADO";</tspan>
+  </text>
+
+  <!-- Ação 4: Retorno Aprovado -->
+  <rect x="470" y="540" width="220" height="55" rx="8" ry="8" class="node-action"/>
+  <text x="580" y="567" class="text-main text-code">
+    <tspan x="580" dy="-8">calcula valorFinal e</tspan>
+    <tspan x="580" dy="18">return "PEDIDO APROVADO...";</tspan>
+  </text>
+
+  <!-- Fim -->
+  <rect x="320" y="660" width="160" height="40" rx="20" ry="20" class="node-start-end"/>
+  <text x="400" y="680" class="text-main">Fim</text>
+</svg>
